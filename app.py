@@ -15,6 +15,7 @@ def status():
         "status": "healthy",
         "environment": os.getenv("ENVIRONMENT", "development"),
         "version": os.getenv("APP_VERSION", "1.0.0"),
+        "deployed_via": "GitHub Actions CI/CD",
         "container_id": socket.gethostname(),
         "architecture": os.uname().machine,
         "total_requests": hits
