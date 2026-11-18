@@ -1,0 +1,55 @@
+name: CI/CD Pipeline - Build, Validate & Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  ci-validate:
+    name: Continuous Integration (Syntax & Compose Check)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify Python syntax compilation
+        run: python -m py_compile app.py
+
+      - name: Validate Docker Compose configuration
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+
+  cd-deploy:
+    name: Continuous Deployment to Oracle ARM64 VPS
+    needs: ci-validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy updated containers via SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "$SERVER_USER@$SERVER_HOST" << 'EOF'
+            set -e
+            cd /home/yahor/projects/status-api
+            git pull origin main
+            docker compose up -d --build
+            docker image prune -f
+          EOF
+
+      - name: Post-Deployment HTTPS Smoke Test
+        run: |
+          sleep 3
+          curl --fail --silent --show-error https://gareznik-lab.duckdns.org/api/ | grep -q "healthy"
