@@ -1,0 +1,31 @@
+services:
+  api:
+    build: .
+    container_name: status-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+    ports:
+      - "127.0.0.1:8080:5000"
+    depends_on:
+      - redis
+    networks:
+      - backend-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: status-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend-net
+
+volumes:
+  redis-data:
+
+networks:
+  backend-net:
+    driver: bridge

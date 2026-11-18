@@ -1,0 +1,7 @@
+# Exclude environment variables with sensitive config (managed by Ansible)
+.env
+
+# Exclude Python bytecode and cache directories
+__pycache__/
+*.py[cod]
+.pytest_cache/
